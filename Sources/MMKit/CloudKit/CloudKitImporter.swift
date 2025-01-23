@@ -1,42 +1,62 @@
 import CloudKit
 
 public final class CloudKitImporter {
-    let developmentDatabase: CKDatabase
-    let productionDatabase: CKDatabase
+    let database: CKDatabase
     
     public init(developmentIdentifier: String, productionIdentifier: String) {
-        let developmentContainer = CKContainer(identifier: developmentIdentifier)
-        let productionContainer = CKContainer(identifier: productionIdentifier)
-
-        developmentDatabase = developmentContainer.publicCloudDatabase
-        productionDatabase = productionContainer.publicCloudDatabase
+        let container = CKContainer(identifier: developmentIdentifier)
+        database = container.publicCloudDatabase
     }
     
-    public func migrateDataToProduction(recordType: String) {
+    public func saveDevelopmentDatabase(type: String) {
         // Query records in development
-        let query = CKQuery(recordType: recordType, predicate: NSPredicate(value: true))
-        developmentDatabase.perform(query, inZoneWith: nil) { records, error in
+        let query = CKQuery(recordType: type, predicate: NSPredicate(value: true))
+        database.perform(query, inZoneWith: nil) { records, error in
             if let error = error {
                 print("MMKit - CloudKitImporter - Error fetching records from development: \(error)")
                 return
             }
-
+            
             guard let records = records else { return }
             
-            print("MMKit - CloudKitImporter - migrateDataToProduction records count: \(records.count)")
-
-            // Save records to production
-            for record in records {
-                print("MMKit - CloudKitImporter - migrateDataToProduction record: \(record)")
-                let newRecord = CKRecord(recordType: record.recordType)
-                newRecord.setValuesForKeys(record.dictionaryWithValues(forKeys: record.allKeys()))
-                self.productionDatabase.save(newRecord) { _, error in
-                    if let error = error {
-                        print("MMKit - CloudKitImporter - Error saving record to production: \(error)")
-                    }
-                }
+            let urls = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+            let docsDirectoryURL = urls[0]
+            let ckStyleURL = docsDirectoryURL.appendingPathComponent("\(type)_ckstylerecords.data")
+            
+            do {
+                let data : Data = try NSKeyedArchiver.archivedData(withRootObject: records, requiringSecureCoding: true)
+                
+                try data.write(to: ckStyleURL, options: .atomic)
+                print("MMKit - CloudKitImporter - data write ckStyleRecords successful")
+                
+            } catch {
+                print("MMKit - CloudKitImporter - could not save ckStyleRecords to documents directory")
             }
         }
+    }
+    
+    func importDatabaseFromFile(type: String, completion: @escaping ([CKRecord]) -> Void) {
+        let urls = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+        let docsDirectoryURL = urls[0]
+        let ckStyleURL = docsDirectoryURL.appendingPathComponent("\(type)_ckstylerecords.data")
+        
+        var newRecords : [CKRecord] = []
+        if FileManager.default.fileExists(atPath: ckStyleURL.path) {
+            do {
+                let data = try Data(contentsOf:ckStyleURL)
+                
+                //yes, I know this has been deprecated, but I can't seem to get the new format to work
+                if let theRecords: [CKRecord] = try NSKeyedUnarchiver.unarchiveObject(with: data) as? [CKRecord] {
+                    newRecords = theRecords
+                    print("MMKit - CloudKitImporter - newRecords.count is \(newRecords.count)")
+                }
+                
+            } catch {
+                print("MMKit - CloudKitImporter - could not retrieve ckStyleRecords from documents directory")
+            }
+            
+        }
+        completion(newRecords)
     }
 }
 
