@@ -3,7 +3,7 @@ import CloudKit
 public final class CloudKitImporter {
     let database: CKDatabase
     
-    public init(developmentIdentifier: String, productionIdentifier: String) {
+    public init(developmentIdentifier: String) {
         let container = CKContainer(identifier: developmentIdentifier)
         database = container.publicCloudDatabase
     }
@@ -35,7 +35,7 @@ public final class CloudKitImporter {
         }
     }
     
-    func importDatabaseFromFile(type: String, completion: @escaping ([CKRecord]) -> Void) {
+    public func importDatabaseFromFile(type: String, completion: @escaping ([CKRecord]) -> Void) {
         let urls = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
         let docsDirectoryURL = urls[0]
         let ckStyleURL = docsDirectoryURL.appendingPathComponent("\(type)_ckstylerecords.data")
