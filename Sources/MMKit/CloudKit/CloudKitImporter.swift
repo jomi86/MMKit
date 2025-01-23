@@ -4,7 +4,7 @@ public final class CloudKitImporter {
     let developmentDatabase: CKDatabase
     let productionDatabase: CKDatabase
     
-    init(developmentIdentifier: String, productionIdentifier: String) {
+    public init(developmentIdentifier: String, productionIdentifier: String) {
         let developmentContainer = CKContainer(identifier: developmentIdentifier)
         let productionContainer = CKContainer(identifier: productionIdentifier)
 
@@ -12,7 +12,7 @@ public final class CloudKitImporter {
         productionDatabase = productionContainer.publicCloudDatabase
     }
     
-    func migrateDataToProduction(recordType: String) {
+    public func migrateDataToProduction(recordType: String) {
         // Query records in development
         let query = CKQuery(recordType: recordType, predicate: NSPredicate(value: true))
         developmentDatabase.perform(query, inZoneWith: nil) { records, error in
