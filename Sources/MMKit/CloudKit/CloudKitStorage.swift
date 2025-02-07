@@ -1,7 +1,7 @@
 import Foundation
 import CloudKit
 
-class CloudKitStorage {
+public class CloudKitStorage {
     public func getSavedJSONFileURL(fileName: String) -> URL? {
         if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
             return documentsDirectory.appendingPathComponent("\(fileName).json")
