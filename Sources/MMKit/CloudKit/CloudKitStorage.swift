@@ -1,6 +1,23 @@
 import Foundation
 import CloudKit
 
+public enum CloudKitStorageError: Error {
+    case jsonEncoder
+    case prepareStorage
+    case dataWrite
+    
+    public var description: String {
+        switch self {
+        case .jsonEncoder:
+            "Error encoding records array to JSON"
+        case .prepareStorage:
+            "Error preparing device storage"
+        case .dataWrite:
+            "Error writing data to device storage"
+        }
+    }
+}
+
 public class CloudKitStorage {
     public init() {}
     
@@ -41,18 +58,26 @@ public class CloudKitStorage {
         return recordDictionaries
     }
     
-    public func saveToJSONFile(data: [[String: Any]], fileName: String) -> Bool {
+    @MainActor
+    public func saveRecordsToData<T: Codable>(records: [T]) throws -> Data {
         do {
-            let jsonData = try JSONSerialization.data(withJSONObject: data, options: .prettyPrinted)
-            
-            if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                let fileURL = documentsDirectory.appendingPathComponent("\(fileName).json")
-                try jsonData.write(to: fileURL)
-                return true
-            }
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(records)
+            return data
         } catch {
-            return false
+            throw CloudKitStorageError.jsonEncoder
         }
-        return false
+    }
+    
+    public func saveDataToFile(data: Data, fileName: String) throws {
+        do {
+            guard let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                throw CloudKitStorageError.prepareStorage
+            }
+            let fileURL = documentsDirectory.appendingPathComponent("\(fileName).json")
+            try data.write(to: fileURL)
+        } catch {
+            throw CloudKitStorageError.dataWrite
+        }
     }
 }
